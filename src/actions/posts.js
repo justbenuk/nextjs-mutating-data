@@ -1,7 +1,8 @@
 'use server'
-import { storePost } from "@/lib/posts";
+import { storePost, updatePostLikeStatus } from "@/lib/posts";
 import { redirect } from "next/navigation";
 import { uploadImage } from "@/lib/cloudinary";
+import { revalidatePath } from "next/cache";
 export async function createPost(prevState, formData) {
   const title = formData.get('title');
   const image = formData.get('image');
@@ -30,7 +31,7 @@ export async function createPost(prevState, formData) {
   try {
     imageUrl = await uploadImage(image)
   } catch (error) {
-    throw new Error('Image upload failed')
+    throw new Error('Image upload failed, Please try again later')
   }
 
   await storePost({
@@ -40,4 +41,9 @@ export async function createPost(prevState, formData) {
     userId: 1
   })
   redirect('/feed')
+}
+
+export async function togglePostLikeStatus(postId){
+  await updatePostLikeStatus(postId, 2)
+  revalidatePath('/feed')
 }

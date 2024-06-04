@@ -1,7 +1,9 @@
+'use client'
 import { formatDate } from '@/lib/format';
 import LikeButton from './like-icon';
-
-function Post({ post }) {
+import { useOptimistic } from 'react'
+import { togglePostLikeStatus } from '@/actions/posts';
+function Post({ post, action }) {
   return (
     <article className="post">
       <div className="post-image">
@@ -19,7 +21,9 @@ function Post({ post }) {
             </p>
           </div>
           <div>
-            <LikeButton />
+            <form action={action.bind(null, post.id)} className={post.isLiked ? 'liked' : ''}>
+              <LikeButton />
+            </form>
           </div>
         </header>
         <p>{post.content}</p>
@@ -29,15 +33,46 @@ function Post({ post }) {
 }
 
 export default function Posts({ posts }) {
-  if (!posts || posts.length === 0) {
+
+  // we need to access the post array and midify the like status before the post is updated.
+  const [optimisticPosts, updateOptimisticPosts] = useOptimistic(posts, (prevPosts, updatedPostId) => {
+
+    // find the index of the post we want to update
+    const updatedPostIndex = prevPosts.findIndex(post => post.id === updatedPostId)
+
+    // check if the post does exist
+    if(updatedPostId === -1){
+      return prevPosts
+    }
+
+    // access the like status of the current posts and pre render the change while to form is being actioned
+    const updatedPost = {...prevPosts[updatedPostIndex]}
+
+    // if post is being like we add 1 if its being unliked we take one away
+    updatedPost.likes = updatedPost.likes + (updatedPost.isLiked ? -1 : 1)
+
+    // we updated the likes to what ever the oiposite status is
+    updatedPost.isLiked = !updatedPost.isLiked
+
+    //Update the posts array with new data
+    const newPosts = [...prevPosts]
+    newPosts[updatedPostIndex] = updatedPost
+    return newPosts
+  })
+  if (!optimisticPosts || optimisticPosts.length === 0) {
     return <p>There are no posts yet. Maybe start sharing some?</p>;
+  }
+
+  async function updatePost(postId){
+    updateOptimisticPosts(postId)
+    await togglePostLikeStatus(postId)
   }
 
   return (
     <ul className="posts">
-      {posts.map((post) => (
+      {optimisticPosts.map((post) => (
         <li key={post.id}>
-          <Post post={post} />
+          <Post post={post} action={updatePost}/>
         </li>
       ))}
     </ul>
