@@ -3,11 +3,24 @@ import { formatDate } from '@/lib/format';
 import LikeButton from './like-icon';
 import { useOptimistic } from 'react'
 import { togglePostLikeStatus } from '@/actions/posts';
+import Image from 'next/image';
+
+// cloudinary
+function imageLoader(config){
+
+  //build the cloudinary url
+  const urlStart = config.src.split('upload/')[0]
+  const urlEnd = config.src.split('upload/')[1]
+  const transorm = `w_200,q_${config.quality}`
+
+  //return the built url
+  return `${urlStart}upload/${transorm}/${urlEnd}`
+}
 function Post({ post, action }) {
   return (
     <article className="post">
       <div className="post-image">
-        <img src={post.image} alt={post.title} />
+        <Image loader={imageLoader} src={post.image} alt={post.title} width={200} height={120} quality={50}/>
       </div>
       <div className="post-content">
         <header>
